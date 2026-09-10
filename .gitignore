@@ -1,0 +1,7 @@
+nexus-ast
+*.exe
+*.test
+*.out
+report.json
+.vscode/
+.idea/

@@ -1,0 +1,46 @@
+name: 'Nexus-AST Authorization Linter'
+description: 'Autonomous Static AST & BOLA Policy Linter for Pull Requests'
+author: 'Sandeep Yadav'
+inputs:
+  repo-path:
+    description: 'Path to source code repository'
+    required: false
+    default: '.'
+  output-json:
+    description: 'Output JSON report file'
+    required: false
+    default: 'nexus-report.json'
+  fail-on-critical:
+    description: 'Fail the GitHub Action check if Critical BOLA bugs are found'
+    required: false
+    default: 'true'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.24'
+
+    - name: Build Nexus-AST
+      shell: bash
+      run: |
+        cd ${{ github.action_path }}
+        go build -o /usr/local/bin/nexus-ast main.go
+
+    - name: Run Nexus-AST Static Analysis
+      shell: bash
+      run: |
+        nexus-ast scan --repo ${{ inputs.repo-path }} --output ${{ inputs.output-json }}
+
+    - name: Evaluate Findings and Fail Check
+      shell: bash
+      run: |
+        if [ -f "${{ inputs.output-json }}" ]; then
+          VULN_COUNT=$(jq '.findings | length' ${{ inputs.output-json }} 2>/dev/null || echo "0")
+          if [ "$VULN_COUNT" -gt 0 ] && [ "${{ inputs.fail-on-critical }}" = "true" ]; then
+            echo "::error::Nexus-AST identified $VULN_COUNT authorization policy violation(s)! Review audit report."
+            exit 1
+          fi
+        fi
