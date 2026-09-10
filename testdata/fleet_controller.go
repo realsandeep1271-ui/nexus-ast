@@ -1,6 +1,7 @@
 package testdata
 
 type ContextWrapper struct{}
+func (c *ContextWrapper) GetString(k string) string { return "tenant_1" }
 func (c *ContextWrapper) Param(key string) string { return "" }
 func (c *ContextWrapper) JSON(code int, obj any)  {}
 

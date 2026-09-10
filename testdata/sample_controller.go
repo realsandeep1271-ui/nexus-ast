@@ -1,6 +1,7 @@
 package testdata
 
 type RequestContext struct{}
+func (c *RequestContext) GetString(k string) string { return "tenant_1" }
 func (c *RequestContext) Param(key string) string { return "" }
 func (c *RequestContext) JSON(code int, obj any)  {}
 

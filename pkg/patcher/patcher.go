@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"strings"
 
 	"github.com/sandeep-yadav/nexus-ast/pkg/models"
 )
@@ -14,17 +13,25 @@ import (
 // ApplyFixes automatically rewrites Go source files to eliminate BOLA vulnerabilities
 func ApplyFixes(targetDir string, findings []models.Finding) (int, error) {
 	patchedCount := 0
-	filesToPatch := make(map[string][]models.Finding)
+	filesToPatch := make(map[string]bool)
 
 	for _, f := range findings {
 		if f.SourceRef != "" {
-			parts := strings.Split(f.SourceRef, ":")
-			fileName := parts[0]
-			filesToPatch[fileName] = append(filesToPatch[fileName], f)
+			var fileName string
+			fmt.Sscanf(f.SourceRef, "%s", &fileName)
+			for i, c := range fileName {
+				if c == ':' {
+					fileName = fileName[:i]
+					break
+				}
+			}
+			filesToPatch[fileName] = true
 		}
 	}
 
-	for fileName, fileFindings := range filesToPatch {
+	reWhere := regexp.MustCompile(`(?m)^(\t+)(db\.Where\("id = \?",\s*([a-zA-Z0-9_]+)\))`)
+
+	for fileName := range filesToPatch {
 		var fullPath string
 		_ = filepath.Walk(targetDir, func(path string, info os.FileInfo, err error) error {
 			if err == nil && filepath.Base(path) == fileName {
@@ -43,28 +50,11 @@ func ApplyFixes(targetDir string, findings []models.Finding) (int, error) {
 		}
 
 		content := string(contentBytes)
-		originalContent := content
+		matches := reWhere.FindAllStringSubmatch(content, -1)
+		if len(matches) > 0 {
+			content = reWhere.ReplaceAllString(content, "${1}tenantID := c.GetString(\"tenant_id\") // 🤖 Auto-patched by Nexus-AST\n${1}db.Where(\"id = ? AND tenant_id = ?\", ${3}, tenantID)")
+			patchedCount += len(matches)
 
-		for _, f := range fileFindings {
-			reParam := regexp.MustCompile(`'([a-zA-Z0-9_]+)'`)
-			matches := reParam.FindStringSubmatch(f.Description)
-			paramName := "objectID"
-			if len(matches) > 1 {
-				paramName = matches[1]
-			}
-
-			oldWhere := fmt.Sprintf(`Where("id = ?", %s)`, paramName)
-			newWhere := fmt.Sprintf(`Where("id = ? AND tenant_id = ?", %s, tenantID)`, paramName)
-
-			if strings.Contains(content, oldWhere) {
-				injection := fmt.Sprintf("\n\ttenantID := c.GetString(\"tenant_id\") // 🤖 Auto-patched by Nexus-AST\n\tdb.", paramName)
-				content = strings.Replace(content, oldWhere, newWhere, 1)
-				content = strings.Replace(content, "\tdb.", injection, 1)
-				patchedCount++
-			}
-		}
-
-		if content != originalContent {
 			formatted, err := format.Source([]byte(content))
 			if err == nil {
 				_ = os.WriteFile(fullPath, formatted, 0644)
