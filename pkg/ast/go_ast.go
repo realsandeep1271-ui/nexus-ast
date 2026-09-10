@@ -73,7 +73,8 @@ func inspectASTNode(fset *token.FileSet, node *ast.File, filePath string) []mode
 					hasDirectQuery = true
 				}
 
-				if methodName == "Get" || methodName == "Value" || methodName == "MustGet" {
+				// Check for session tenant checks
+				if methodName == "Get" || methodName == "GetString" || methodName == "Value" || methodName == "MustGet" {
 					hasTenantVerification = true
 				}
 			}
@@ -104,7 +105,7 @@ func inspectASTNode(fset *token.FileSet, node *ast.File, filePath string) []mode
 
 func isSensitiveIdentifier(param string) bool {
 	p := strings.ToLower(param)
-	identifiers := []string{"id", "user_id", "org_id", "tenant_id", "account_id", "invoice_id", "doc_id", "uuid"}
+	identifiers := []string{"id", "user_id", "org_id", "tenant_id", "account_id", "invoice_id", "doc_id", "vehicle_id", "uuid"}
 	for _, id := range identifiers {
 		if p == id || strings.HasSuffix(p, "_id") {
 			return true
