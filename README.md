@@ -2,7 +2,7 @@
 
 > **Autonomous AST-Driven Authorization & BOLA Linter for Cloud-Native APIs**
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/sandeep-yadav/nexus-ast)](https://goreportcard.com/report/github.com/sandeep-yadav/nexus-ast)
+[![Go Report Card](https://goreportcard.com/badge/github.com/realsandeep1271-ui/nexus-ast)](https://goreportcard.com/report/github.com/realsandeep1271-ui/nexus-ast)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![GitHub Action](https://img.shields.io/badge/CI%2FCD-GitHub%20Action-green)](.github/workflows/nexus-audit.yml)
 
@@ -26,7 +26,7 @@ Traditional static analysis tools (SAST) and dynamic scanners (DAST) identify sy
 ### Installation
 
 ```bash
-git clone https://github.com/sandeep-yadav/nexus-ast.git
+git clone https://github.com/realsandeep1271-ui/nexus-ast.git
 cd nexus-ast
 go build -o nexus-ast main.go
 ```
@@ -66,7 +66,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Nexus-AST Authorization Scan
-        uses: sandeep-yadav/nexus-ast@main
+        uses: realsandeep1271-ui/nexus-ast@main
         with:
           repo-path: '.'
           fail-on-critical: 'true'
