@@ -1,0 +1,52 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Vehicle Fleet & Workshop Microservices API",
+    "version": "2.4.0",
+    "description": "Enterprise API specification with microservices routes"
+  },
+  "paths": {
+    "/api/v2/vehicles/{vehicle_id}/location": {
+      "get": {
+        "summary": "Get real-time vehicle GPS coordinates",
+        "parameters": [
+          { "name": "vehicle_id", "in": "path", "required": true }
+        ],
+        "security": [{ "BearerAuth": [] }]
+      }
+    },
+    "/api/v2/mechanic/orders/{order_id}": {
+      "get": {
+        "summary": "Fetch order details for service appointment",
+        "parameters": [
+          { "name": "order_id", "in": "path", "required": true }
+        ],
+        "security": [{ "BearerAuth": [] }]
+      },
+      "put": {
+        "summary": "Update order status",
+        "parameters": [
+          { "name": "order_id", "in": "path", "required": true }
+        ],
+        "security": [{ "BearerAuth": [] }]
+      }
+    },
+    "/api/v2/community/posts/{post_id}/comments": {
+      "get": {
+        "summary": "List comments for community post",
+        "parameters": [
+          { "name": "post_id", "in": "path", "required": true }
+        ]
+      }
+    },
+    "/api/v2/identity/users/{user_id}/billing": {
+      "get": {
+        "summary": "Retrieve payment methods and credit card tokens",
+        "parameters": [
+          { "name": "user_id", "in": "path", "required": true }
+        ],
+        "security": [{ "BearerAuth": [] }]
+      }
+    }
+  }
+}

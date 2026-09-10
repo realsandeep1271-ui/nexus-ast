@@ -1,0 +1,37 @@
+{
+  "target": "./testdata",
+  "timestamp": "2026-09-10T07:54:28.686121383Z",
+  "endpoints_scanned": 3,
+  "findings": [
+    {
+      "type": "AUTH_UNBOUND_OBJECT_ID",
+      "severity": "CRITICAL",
+      "title": "Authorization Policy Violation: Unbound Identifier in GetVehicleLocationHandler",
+      "description": "Controller extracts sensitive object identifier 'vehicle_id' from URL parameters and queries database without asserting session tenant boundaries.",
+      "endpoint": "Handler: GetVehicleLocationHandler",
+      "method": "STATIC_AST",
+      "source_ref": "fleet_controller.go:20",
+      "remediation": "Ensure queries include authenticated tenant context: db.Where(\"id = ? AND tenant_id = ?\", vehicle_id, session.TenantID)."
+    },
+    {
+      "type": "AUTH_UNBOUND_OBJECT_ID",
+      "severity": "CRITICAL",
+      "title": "Authorization Policy Violation: Unbound Identifier in DeleteVehicleHandler",
+      "description": "Controller extracts sensitive object identifier 'vehicle_id' from URL parameters and queries database without asserting session tenant boundaries.",
+      "endpoint": "Handler: DeleteVehicleHandler",
+      "method": "STATIC_AST",
+      "source_ref": "fleet_controller.go:29",
+      "remediation": "Ensure queries include authenticated tenant context: db.Where(\"id = ? AND tenant_id = ?\", vehicle_id, session.TenantID)."
+    },
+    {
+      "type": "AUTH_UNBOUND_OBJECT_ID",
+      "severity": "CRITICAL",
+      "title": "Authorization Policy Violation: Unbound Identifier in GetInvoiceHandler",
+      "description": "Controller extracts sensitive object identifier 'invoice_id' from URL parameters and queries database without asserting session tenant boundaries.",
+      "endpoint": "Handler: GetInvoiceHandler",
+      "method": "STATIC_AST",
+      "source_ref": "sample_controller.go:18",
+      "remediation": "Ensure queries include authenticated tenant context: db.Where(\"id = ? AND tenant_id = ?\", invoice_id, session.TenantID)."
+    }
+  ]
+}
