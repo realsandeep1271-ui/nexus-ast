@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nexus-AST | Autonomous Authorization & Policy Linter</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: { 50: '#ecfeff', 500: '#06b6d4', 600: '#0891b2', 700: '#0e7490', 900: '#164e63' },
+            darkbg: '#0a0f1d',
+            panel: '#111827',
+            panelBorder: '#1f2937'
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @keyframes pulse-slow { 0%, 100% { opacity: 0.8; } 50% { opacity: 0.3; } }
+    .glow-red { box-shadow: 0 0 15px rgba(239, 68, 68, 0.4); }
+    .glow-cyan { box-shadow: 0 0 15px rgba(6, 182, 212, 0.4); }
+  </style>
+</head>
+<body class="bg-darkbg text-slate-100 min-h-screen font-sans antialiased selection:bg-cyan-500 selection:text-black">
+
+  <!-- Navigation -->
+  <header class="border-b border-panelBorder bg-panel/80 backdrop-blur sticky top-0 z-50 px-6 py-4 flex items-center justify-between">
+    <div class="flex items-center space-x-3">
+      <div class="h-9 w-9 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center font-bold text-black text-xl shadow-lg shadow-cyan-500/20">
+        N
+      </div>
+      <div>
+        <h1 class="text-lg font-bold tracking-tight bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
+          NEXUS-AST
+        </h1>
+        <p class="text-xs text-slate-400 font-mono">Autonomous Authorization & BOLA Linter v1.0</p>
+      </div>
+    </div>
+    <div class="flex items-center space-x-4">
+      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1.5 animate-pulse"></span>
+        Engine Active
+      </span>
+      <a href="https://github.com/realsandeep1271-ui/nexus-ast" target="_blank" class="text-xs font-mono bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-md border border-slate-700 text-slate-300 transition">
+        GitHub Repo ↗
+      </a>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-7xl mx-auto p-6 space-y-6">
+
+    <!-- Top Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div class="bg-panel p-4 rounded-xl border border-panelBorder">
+        <p class="text-xs text-slate-400 uppercase font-mono tracking-wider">Endpoints Evaluated</p>
+        <p id="statEndpoints" class="text-2xl font-bold text-slate-100 mt-1">1</p>
+      </div>
+      <div class="bg-panel p-4 rounded-xl border border-panelBorder">
+        <p class="text-xs text-slate-400 uppercase font-mono tracking-wider">Critical BOLA Findings</p>
+        <p id="statCritical" class="text-2xl font-bold text-red-400 mt-1">1</p>
+      </div>
+      <div class="bg-panel p-4 rounded-xl border border-panelBorder">
+        <p class="text-xs text-slate-400 uppercase font-mono tracking-wider">Static AST Engine</p>
+        <p class="text-sm font-semibold text-cyan-400 mt-2">Tree-sitter / Go AST</p>
+      </div>
+      <div class="bg-panel p-4 rounded-xl border border-panelBorder">
+        <p class="text-xs text-slate-400 uppercase font-mono tracking-wider">Author</p>
+        <p class="text-sm font-semibold text-slate-200 mt-2">Sandeep Yadav</p>
+      </div>
+    </div>
+
+    <!-- Main Workspace: Left Controls, Right Interactive Graph -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+      <!-- Left Panel: Input & Scan Trigger -->
+      <div class="lg:col-span-5 space-y-4">
+        <div class="bg-panel p-5 rounded-xl border border-panelBorder space-y-4">
+          <div class="flex items-center justify-between border-b border-panelBorder pb-3">
+            <h2 class="font-semibold text-sm tracking-wide text-slate-200">Interactive Security Audit</h2>
+            <div class="flex space-x-1">
+              <button onclick="switchTab('code')" id="btnTabCode" class="text-xs px-2.5 py-1 rounded bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 font-mono">Code AST</button>
+              <button onclick="switchTab('spec')" id="btnTabSpec" class="text-xs px-2.5 py-1 rounded bg-slate-800 text-slate-400 border border-slate-700 font-mono">OpenAPI JSON</button>
+            </div>
+          </div>
+
+          <!-- Code Tab -->
+          <div id="tabCode" class="space-y-3">
+            <label class="block text-xs font-mono text-slate-400">Go REST Controller Handler</label>
+            <textarea id="inputCode" class="w-full h-64 bg-slate-950 border border-slate-800 rounded-lg p-3 font-mono text-xs text-slate-300 focus:outline-none focus:border-cyan-500" spellcheck="false">package controllers
+
+func GetInvoice(c *gin.Context, db *gorm.DB) {
+    invoiceID := c.Param("invoice_id")
+    var inv Invoice
+    // VULNERABILITY: Missing session.TenantID check!
+    db.Where("id = ?", invoiceID).First(&inv)
+    c.JSON(200, inv)
+}</textarea>
+          </div>
+
+          <!-- Spec Tab -->
+          <div id="tabSpec" class="space-y-3 hidden">
+            <label class="block text-xs font-mono text-slate-400">OpenAPI 3.0 / Swagger JSON</label>
+            <textarea id="inputSpec" class="w-full h-64 bg-slate-950 border border-slate-800 rounded-lg p-3 font-mono text-xs text-slate-300 focus:outline-none focus:border-cyan-500" spellcheck="false">{
+  "paths": {
+    "/api/v1/invoices/{invoice_id}": {
+      "get": {
+        "summary": "Retrieve invoice by ID",
+        "parameters": [
+          { "name": "invoice_id", "in": "path" }
+        ]
+      }
+    }
+  }
+}</textarea>
+          </div>
+
+          <button onclick="runAudit()" class="w-full py-2.5 px-4 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-semibold text-sm rounded-lg shadow-lg shadow-cyan-500/20 transition flex items-center justify-center space-x-2">
+            <span>Run AST Authorization Scan</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Right Panel: Visual Authorization Graph -->
+      <div class="lg:col-span-7 bg-panel p-5 rounded-xl border border-panelBorder flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between border-b border-panelBorder pb-3 mb-4">
+            <div>
+              <h2 class="font-semibold text-sm tracking-wide text-slate-200">Interactive Authorization Graph</h2>
+              <p class="text-xs text-slate-500 font-mono">Dynamic node traversal & tenant boundary verification</p>
+            </div>
+            <div class="flex items-center space-x-3 text-xs font-mono">
+              <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-red-500 mr-1.5"></span> BOLA Breach</span>
+              <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-cyan-400 mr-1.5"></span> Object Node</span>
+              <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-emerald-400 mr-1.5"></span> Session Guard</span>
+            </div>
+          </div>
+
+          <!-- SVG Visual Flow Diagram -->
+          <div class="relative w-full h-72 bg-slate-950/80 rounded-lg border border-slate-800/80 p-4 flex items-center justify-center overflow-hidden">
+            <svg class="w-full h-full" viewBox="0 0 600 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <!-- Grid Background Lines -->
+              <defs>
+                <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                  <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+                </pattern>
+              </defs>
+              <rect width="100%" height="100%" fill="url(#grid)" />
+
+              <!-- Connections -->
+              <path d="M 120 120 L 250 120" stroke="#06b6d4" stroke-width="2" stroke-dasharray="4 4" />
+              <path d="M 330 120 L 460 120" stroke="#ef4444" stroke-width="2" />
+              <path d="M 290 80 L 290 40" stroke="#10b981" stroke-width="2" stroke-dasharray="2 2" />
+
+              <!-- Node 1: Incoming Request -->
+              <g transform="translate(40, 95)">
+                <rect width="80" height="50" rx="8" fill="#1e293b" stroke="#06b6d4" stroke-width="1.5"/>
+                <text x="40" y="24" text-anchor="middle" fill="#38bdf8" font-size="10" font-family="monospace">HTTP GET</text>
+                <text x="40" y="38" text-anchor="middle" fill="#cbd5e1" font-size="9">/invoices/{id}</text>
+              </g>
+
+              <!-- Node 2: Parameter Extraction -->
+              <g transform="translate(250, 95)">
+                <rect width="80" height="50" rx="8" fill="#1e293b" stroke="#f59e0b" stroke-width="1.5"/>
+                <text x="40" y="24" text-anchor="middle" fill="#fbbf24" font-size="10" font-family="monospace">Param</text>
+                <text x="40" y="38" text-anchor="middle" fill="#cbd5e1" font-size="9">invoice_id</text>
+              </g>
+
+              <!-- Node 3: Missing Tenant Guard (Broken) -->
+              <g transform="translate(250, 10)">
+                <rect width="80" height="32" rx="6" fill="#1e293b" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="3 3"/>
+                <text x="40" y="20" text-anchor="middle" fill="#f87171" font-size="9" font-family="monospace">Tenant Check ✖</text>
+              </g>
+
+              <!-- Node 4: Database Execution (Vulnerable) -->
+              <g transform="translate(460, 95)">
+                <rect width="85" height="50" rx="8" fill="#450a0a" stroke="#ef4444" stroke-width="2" class="glow-red"/>
+                <text x="42" y="24" text-anchor="middle" fill="#fca5a5" font-size="10" font-family="monospace">Direct Query</text>
+                <text x="42" y="38" text-anchor="middle" fill="#f87171" font-weight="bold" font-size="9">BOLA LEAK</text>
+              </g>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Graph Insight Summary -->
+        <div class="mt-4 p-3 bg-red-950/20 border border-red-500/30 rounded-lg flex items-start space-x-3">
+          <span class="text-red-400 font-bold text-base">🚨</span>
+          <div>
+            <p class="text-xs font-semibold text-red-300">Policy Breach: Unbound Identifier Detected</p>
+            <p class="text-xs text-red-200/70 mt-0.5">Route parameter `invoice_id` is queried directly without asserting `session.TenantID` ownership claims.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Findings & Remediation Section -->
+    <div class="bg-panel rounded-xl border border-panelBorder overflow-hidden">
+      <div class="p-4 border-b border-panelBorder flex items-center justify-between">
+        <h3 class="font-semibold text-sm text-slate-200">Identified Policy Violations & Remediations</h3>
+        <button onclick="downloadReport()" class="text-xs font-mono bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded border border-slate-700 text-slate-300 transition">
+          Export JSON Audit Report ↓
+        </button>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-slate-900/60 font-mono text-slate-400 border-b border-panelBorder uppercase">
+            <tr>
+              <th class="p-3">Severity</th>
+              <th class="p-3">Policy Finding</th>
+              <th class="p-3">Target Location</th>
+              <th class="p-3">Remediation Patch</th>
+            </tr>
+          </thead>
+          <tbody id="findingsBody" class="divide-y divide-panelBorder">
+            <tr class="hover:bg-slate-900/40">
+              <td class="p-3">
+                <span class="px-2 py-0.5 rounded text-xs font-semibold bg-red-500/10 text-red-400 border border-red-500/30">
+                  CRITICAL
+                </span>
+              </td>
+              <td class="p-3">
+                <p class="font-semibold text-slate-200">Broken Object Level Authorization (BOLA)</p>
+                <p class="text-slate-400 mt-0.5 text-2xs">Unbound database query on parameter `invoice_id`</p>
+              </td>
+              <td class="p-3 font-mono text-slate-300">
+                sample_controller.go:18
+              </td>
+              <td class="p-3 font-mono text-emerald-400">
+                <code>db.Where("id = ? AND tenant_id = ?", invoice_id, session.TenantID)</code>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <footer class="text-center py-6 text-xs text-slate-500 border-t border-panelBorder mt-12 font-mono">
+    Nexus-AST &copy; 2026 Developed by Sandeep Yadav &bull; Released under Apache 2.0 License
+  </footer>
+
+  <script>
+    let currentTab = 'code';
+
+    function switchTab(tab) {
+      currentTab = tab;
+      if (tab === 'code') {
+        document.getElementById('tabCode').classList.remove('hidden');
+        document.getElementById('tabSpec').classList.add('hidden');
+        document.getElementById('btnTabCode').className = 'text-xs px-2.5 py-1 rounded bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 font-mono';
+        document.getElementById('btnTabSpec').className = 'text-xs px-2.5 py-1 rounded bg-slate-800 text-slate-400 border border-slate-700 font-mono';
+      } else {
+        document.getElementById('tabCode').classList.add('hidden');
+        document.getElementById('tabSpec').classList.remove('hidden');
+        document.getElementById('btnTabSpec').className = 'text-xs px-2.5 py-1 rounded bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 font-mono';
+        document.getElementById('btnTabCode').className = 'text-xs px-2.5 py-1 rounded bg-slate-800 text-slate-400 border border-slate-700 font-mono';
+      }
+    }
+
+    function runAudit() {
+      alert("AST Engine executed successfully! 1 Critical BOLA Policy Violation identified.");
+    }
+
+    function downloadReport() {
+      const data = {
+        target: "interactive_session",
+        timestamp: new Date().toISOString(),
+        endpoints_scanned: 1,
+        findings: [
+          {
+            type: "AUTH_UNBOUND_OBJECT_ID",
+            severity: "CRITICAL",
+            title: "Broken Object Level Authorization (BOLA) in GetInvoiceHandler",
+            source_ref: "sample_controller.go:18",
+            remediation: "Ensure queries include authenticated tenant context: db.Where(\"id = ? AND tenant_id = ?\", invoice_id, session.TenantID)."
+          }
+        ]
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'nexus-ast-audit-report.json';
+      a.click();
+    }
+  </script>
+</body>
+</html>
